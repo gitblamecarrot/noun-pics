@@ -1,0 +1,1 @@
+export const parseBase64TokenUri = dataURI => JSON.parse(Buffer.from(dataURI.substring(29), "base64").toString());
