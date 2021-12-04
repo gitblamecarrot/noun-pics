@@ -57,10 +57,4 @@ export class AppController {
     return;
   }
 
-  @Get('/part/glasses/:n')
-  async getGlasses(@Param("n") n: number) {
-    return getRandomGlasses()
-  }
-
-
 }
