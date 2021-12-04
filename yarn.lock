@@ -1112,6 +1112,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@nouns/assets@^0.1.2":
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@nouns/assets/-/assets-0.1.2.tgz#82d38ff8db824be1ab45c88a7694c57da59c0b4c"
+  integrity sha512-uzQunEg63+O0b/xl9ohWE2SAulCE3fKwzVGsMSNbTOkQv/LSVL6Op26yk+BtVBsy5FCGbRFrdAK8qJ5FVBtgFA==
+
 "@nouns/contracts@^0.1.2":
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/@nouns/contracts/-/contracts-0.1.2.tgz#cd80a963988c46428dcafef661238b8be93f7d00"

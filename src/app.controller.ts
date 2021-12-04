@@ -3,6 +3,7 @@ import { Response } from 'express';
 import { AppService } from './app.service';
 import * as fs from 'fs';
 import { cachePath as computeCachePath } from './utils/cachePath';
+import { getRandomGlasses } from './utils/glasses';
 
 @Controller()
 export class AppController {
@@ -55,5 +56,11 @@ export class AppController {
     png.toFormat(format).pipe(res)
     return;
   }
+
+  @Get('/part/glasses/:n')
+  async getGlasses(@Param("n") n: number) {
+    return getRandomGlasses()
+  }
+
 
 }
