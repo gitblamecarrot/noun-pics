@@ -1,1 +1,1 @@
-export const cachePath = (nounId: number, format: string) => `/tmp/nouns/${nounId}.${format}`;
+export const cachePath = (nounId: number, imageSize: number, format: string) => `/tmp/nouns/${nounId}-${imageSize}.${format}`;

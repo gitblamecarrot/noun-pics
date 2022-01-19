@@ -17,6 +17,8 @@ import { ImageData } from '@nouns/assets';
 import { buildSVG } from '@nouns/sdk';
 import { getRandomGlasses } from './utils/glasses';
 
+export const DEFAULT_IMAGE_SIZE = 320
+
 @Injectable()
 export class AppService {
   private provider: JsonRpcProvider;
@@ -54,13 +56,13 @@ export class AppService {
     return sharp(svg);
   }
 
-  async getPng(id: number): Promise<any> {
-    const cachePath = computeCachePath(id, 'png');
+  async getPng(id: number, imageSize: number = DEFAULT_IMAGE_SIZE): Promise<any> {
+    const cachePath = computeCachePath(id, imageSize, 'png');
     if (fs.existsSync(cachePath)) {
       return await sharp(cachePath);
     }
     const sharpedSvg = await this.getSharp(id);
-    await sharpedSvg.toFormat('png').toFile(cachePath);
+    await sharpedSvg.resize(imageSize, imageSize).toFormat('png').toFile(cachePath);
     return await sharp(cachePath);
   }
 
