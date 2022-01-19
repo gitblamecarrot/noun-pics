@@ -17,7 +17,7 @@ import { ImageData } from '@nouns/assets';
 import { buildSVG } from '@nouns/sdk';
 import { getRandomGlasses } from './utils/glasses';
 
-export const DEFAULT_IMAGE_SIZE = 320
+export const DEFAULT_IMAGE_SIZE = 320;
 
 @Injectable()
 export class AppService {
@@ -56,13 +56,21 @@ export class AppService {
     return sharp(svg);
   }
 
-  async getPng(id: number, imageSize: number = DEFAULT_IMAGE_SIZE): Promise<any> {
+  async getPng(
+    id: number,
+    imageSize: number = DEFAULT_IMAGE_SIZE,
+  ): Promise<any> {
     const cachePath = computeCachePath(id, imageSize, 'png');
     if (fs.existsSync(cachePath)) {
       return await sharp(cachePath);
     }
     const sharpedSvg = await this.getSharp(id);
-    await sharpedSvg.resize(imageSize, imageSize).toFormat('png').toFile(cachePath);
+    await sharpedSvg
+      .resize(imageSize, imageSize, {
+        kernel: 'nearest',
+      })
+      .toFormat('png')
+      .toFile(cachePath);
     return await sharp(cachePath);
   }
 
@@ -93,7 +101,7 @@ export class AppService {
   ): Promise<any> {
     const nounIds = await this.getAddressNounIds(address, delegates);
     const tileSideCount = Math.ceil(Math.sqrt(nounIds.length));
-    const fullSlideCount = Math.pow(tileSideCount, 2)
+    const fullSlideCount = Math.pow(tileSideCount, 2);
     const nounImageSideLength = Math.floor(
       constants.DEFAULT_HEIGHT / tileSideCount,
     );
@@ -117,17 +125,19 @@ export class AppService {
     }
 
     for (let i = nounPngs.length; i < fullSlideCount; i++) {
-      const glasses = (sharp(Buffer.from(this.getRandomDarkGlasses()))).resize({
-        width: nounImageSideLength
-      })
+      const glasses = sharp(Buffer.from(this.getRandomDarkGlasses())).resize(
+        nounImageSideLength,
+        nounImageSideLength,
+        { kernel: 'nearest' },
+      );
       const imageBuffer = await glasses.toBuffer();
       nounPngs.push({
         input: imageBuffer,
         top: top(i),
         left: left(i),
-      })
+      });
     }
-    
+
     const base = await sharp({
       create: {
         width: constants.DEFAULT_WIDTH,
@@ -140,6 +150,6 @@ export class AppService {
   }
 
   getRandomDarkGlasses() {
-    return getRandomGlasses()
+    return getRandomGlasses();
   }
 }
