@@ -30,3 +30,22 @@ You can also use the following query parameters with tile endpoints:
 * [https://noun.pics/0x2573C60a6D127755aA2DC85e342F7da2378a0Cc5 ](https://noun.pics/0x2573C60a6D127755aA2DC85e342F7da2378a0Cc5)
 * [https://noun.pics/subbo.eth](https://noun.pics/subbo.eth)
 * [https://noun.pics/hot.4156.eth?includeDelegates=true](https://noun.pics/hot.4156.eth?includeDelegates=true)
+
+## Deployment
+
+## Docker Container
+
+This repository includes a [Dockerfile](Dockerfile.backend) that will run the application and expose an HTTP endpoint on port `3000`.
+
+### Dependencies
+
+noun.pics needs a [redis](https://redis.io) database to connect to and a JSON-RPC provider to query chain data from.
+
+### Configuration
+
+The application is configured using environment variables:
+
+| Variable Name  | Description                                      | Example                            |
+| -------------- | ------------------------------------------------ | ---------------------------------- |
+| `REDIS_URI`    | A URI to a redis instance that noun.pics can use | `redis://localhost`                |
+| `JSON_RPC_URL` | The URL to a JSON-RPC provider for chain data    | `https://mainnet.infura.io/v3/abc` |
