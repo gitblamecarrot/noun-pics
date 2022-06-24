@@ -16,6 +16,7 @@ import ENS, { getEnsAddress } from '@ensdomains/ensjs';
 import { ImageData } from '@nouns/assets';
 import { buildSVG } from '@nouns/sdk';
 import { getRandomGlasses } from './utils/glasses';
+import { SVGOptions } from './types/svg';
 
 export const DEFAULT_IMAGE_SIZE = 320;
 
@@ -47,24 +48,36 @@ export class AppService {
     return tokenUri.image;
   }
 
-  async getRawSvg(id: number): Promise<Buffer> {
-    return Buffer.from((await this.getSvg(id)).substr(26), 'base64');
+  async getRawSvg(id: number, options: SVGOptions = {}): Promise<Buffer> {
+    let svg = Buffer.from((await this.getSvg(id)).substr(26), 'base64');
+    if (options.removeBackground) {
+      svg = Buffer.from(
+        svg
+          .toString()
+          .replace(
+            /<rect width="100%" height="100%" fill="#(e1d7d5|d5d7e1)" \/>/,
+            '',
+          ),
+      );
+    }
+    return svg;
   }
 
-  async getSharp(id: number): Promise<any> {
-    const svg = await this.getRawSvg(id);
+  async getSharp(id: number, options: SVGOptions = {}): Promise<any> {
+    const svg = await this.getRawSvg(id, options);
     return sharp(svg);
   }
 
   async getPng(
     id: number,
-    imageSize: number = DEFAULT_IMAGE_SIZE,
+    imageSize: number,
+    options: SVGOptions = {},
   ): Promise<any> {
-    const cachePath = computeCachePath(id, imageSize, 'png');
+    const cachePath = computeCachePath(id, imageSize, options, 'png');
     if (fs.existsSync(cachePath)) {
       return await sharp(cachePath);
     }
-    const sharpedSvg = await this.getSharp(id);
+    const sharpedSvg = await this.getSharp(id, options);
     await sharpedSvg
       .resize(imageSize, imageSize, {
         kernel: 'nearest',
@@ -113,7 +126,7 @@ export class AppService {
     // Generate on disk cache
     for (let i in nounIds) {
       const nounId = nounIds[i];
-      const png = (await this.getPng(nounId)).resize({
+      const png = (await this.getPng(nounId, DEFAULT_IMAGE_SIZE)).resize({
         width: nounImageSideLength,
       });
       const imageBuffer = await png.toBuffer();

@@ -30,11 +30,16 @@ export class AppController {
   }
 
   @Get(':id.svg')
-  async getSvg(@Param('id') id: number, @Res() res: Response) {
+  async getSvg(
+    @Param('id') id: number,
+    @Res() res: Response,
+    @Query('removeBackground') removeBackground: boolean,
+  ) {
+    const cacheName = [id, removeBackground ? "rmb": ""].join('_');
     // return (await this.appService.getRawSvg(id)).toString();
-    const cachePath = `/tmp/nouns/${id}.svg`;
+    const cachePath = `/tmp/nouns/${cacheName}.svg`;
     if (!fs.existsSync(cachePath)) {
-      const svg = (await this.appService.getRawSvg(id)).toString();
+      const svg = (await this.appService.getRawSvg(id, {removeBackground})).toString();
       fs.writeFileSync(cachePath, svg);
     }
     res.sendFile(cachePath);
@@ -76,16 +81,18 @@ export class AppController {
     @Param('id') id: string,
     @Res() res: Response,
     @Query('size') size: string,
+    @Query('removeBackground') removeBackground: boolean,
   ) {
     const imageSize = this.flattenSize(size);
     const idParts = id.split('.');
     const nounId = parseInt(idParts[0]);
     const format = idParts[1] || 'png';
 
-    const png = await this.appService.getPng(nounId, imageSize);
+    const png = await this.appService.getPng(nounId, imageSize, {removeBackground});
     png.toFormat(format).pipe(res);
     return;
   }
-  
-   private flattenSize = (size: number | string) => R.min(size ? Number(size) : 320, 1600);
+
+  private flattenSize = (size: number | string) =>
+    R.min(size ? Number(size) : 320, 1600);
 }
