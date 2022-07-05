@@ -17,6 +17,8 @@ import { ImageData } from '@nouns/assets';
 import { buildSVG } from '@nouns/sdk';
 import { getRandomGlasses } from './utils/glasses';
 import { SVGOptions } from './types/svg';
+import { ethers, Overrides } from 'ethers';
+import { generateHexFromNumber } from './utils/number';
 
 export const DEFAULT_IMAGE_SIZE = 320;
 
@@ -37,19 +39,31 @@ export class AppService {
     });
   }
 
-  async getTokenUri(id: number): Promise<TokenUri> {
-    const tokenUri = await this.contracts.nounsTokenContract.tokenURI(id);
+  async generateNounSvgAtBlock(nounId: number, blockTag: string | number) {
+    const seed = await this.contracts.nounsSeederContract.generateSeed(
+      nounId,
+      this.contracts.nounsDescriptorContract.address,
+      {
+        blockTag: generateHexFromNumber(blockTag)
+      }
+    );
+    const svg = await this.contracts.nounsDescriptorContract.generateSVGImage(seed);
+    return sharp(Buffer.from(atob(svg)));
+  }
+
+  async getTokenUri(id: number, overrides: Overrides = {}): Promise<TokenUri> {
+    const tokenUri = await this.contracts.nounsTokenContract.tokenURI(id, overrides);
     if (!tokenUri) throw new Error('No tokenURI for that token ID');
     return parseBase64TokenUri(tokenUri);
   }
 
-  async getSvg(id: number): Promise<string> {
-    const tokenUri = await this.getTokenUri(id);
+  async getSvg(id: number, overrides: Overrides = {}): Promise<string> {
+    const tokenUri = await this.getTokenUri(id, overrides);
     return tokenUri.image;
   }
 
   async getRawSvg(id: number, options: SVGOptions = {}): Promise<Buffer> {
-    let svg = Buffer.from((await this.getSvg(id)).substr(26), 'base64');
+    let svg = Buffer.from((await this.getSvg(id, options.overrides)).substr(26), 'base64');
     if (options.removeBackground) {
       svg = Buffer.from(
         svg

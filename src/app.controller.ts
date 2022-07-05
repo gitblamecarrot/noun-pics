@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import { cachePath as computeCachePath } from './utils/cachePath';
 import { getRandomGlasses } from './utils/glasses';
 import * as R from 'ramda';
+import { generateHexFromNumber } from './utils/number';
 
 @Controller()
 export class AppController {
@@ -27,6 +28,24 @@ export class AppController {
   @Get('tokenUri/:id')
   async getTokenUri(@Param('id') id: number) {
     return this.appService.getTokenUri(id);
+  }
+
+  @Get('/block/:blockTag/:id')
+  async getImageAtBlock(
+    @Param('id') id: string,
+    @Param('blockTag') blockTag: string,
+    @Res() res: Response,
+    @Query('size') size: string,
+    @Query('removeBackground') removeBackground: boolean,
+  ) {
+    const imageSize = this.flattenSize(size);
+    const idParts = id.split('.');
+    const nounId = parseInt(idParts[0]);
+    const format = idParts[1] || 'png';
+
+    const noun = await this.appService.generateNounSvgAtBlock(nounId, blockTag)
+    noun.toFormat(format).pipe(res);
+    return;
   }
 
   @Get(':id.svg')
@@ -76,6 +95,7 @@ export class AppController {
     nounTile.toFormat('png').pipe(res);
   }
 
+
   @Get(':id')
   async getImage(
     @Param('id') id: string,
@@ -92,6 +112,7 @@ export class AppController {
     png.toFormat(format).pipe(res);
     return;
   }
+
 
   private flattenSize = (size: number | string) =>
     R.min(size ? Number(size) : 320, 1600);
