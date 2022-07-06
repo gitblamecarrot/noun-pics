@@ -1,22 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JsonRpcProvider } from '@ethersproject/providers';
-import { getContractsForChainOrThrow, DecodedImage } from '@nouns/sdk';
+import { getContractsForChainOrThrow, DecodedImage, NounsTokenFactory } from '@nouns/sdk';
 import { parseBase64TokenUri } from './utils/tokenUri';
 import { TokenUri } from './types/tokenUri';
 import * as sharp from 'sharp';
-import defaults from './utils/constants';
-import { allNouns, nounsForAddress } from './utils/theGraph';
+import {  nounsForAddress } from './utils/theGraph';
 import { Noun } from './types/noun';
 import * as R from 'ramda';
 import constants from './utils/constants';
 import * as fs from 'fs';
 import { cachePath as computeCachePath } from './utils/cachePath';
 import ENS, { getEnsAddress } from '@ensdomains/ensjs';
-import { ImageData } from '@nouns/assets';
-import { buildSVG } from '@nouns/sdk';
 import { getRandomGlasses } from './utils/glasses';
 import { SVGOptions } from './types/svg';
+import {  Overrides } from 'ethers';
+import { generateHexFromNumber } from './utils/number';
+import { getContractsForChainOrThrow as getLilNounsContractsForChainOrThrow } from './utils/lilNouns';
 
 export const DEFAULT_IMAGE_SIZE = 320;
 
@@ -31,25 +31,42 @@ export class AppService {
     const chainId = this.configService.get<number>('CHAIN_ID') || 1;
     this.provider = new JsonRpcProvider(jsonRpcUrl);
     this.contracts = getContractsForChainOrThrow(chainId, this.provider);
+    switch (process.env.TOKEN) {
+      case "lilNouns":
+        this.contracts = getLilNounsContractsForChainOrThrow(chainId, this.provider)
+        break;
+    }
     this.ens = new ENS({
       provider: this.provider,
       ensAddress: getEnsAddress('1'),
     });
   }
 
-  async getTokenUri(id: number): Promise<TokenUri> {
-    const tokenUri = await this.contracts.nounsTokenContract.tokenURI(id);
+  async generateNounSvgAtBlock(nounId: number, blockTag: string | number) {
+    const seed = await this.contracts.nounsSeederContract.generateSeed(
+      nounId,
+      this.contracts.nounsDescriptorContract.address,
+      {
+        blockTag: generateHexFromNumber(blockTag)
+      }
+    );
+    const svg = await this.contracts.nounsDescriptorContract.generateSVGImage(seed);
+    return sharp(Buffer.from(atob(svg)));
+  }
+
+  async getTokenUri(id: number, overrides: Overrides = {}): Promise<TokenUri> {
+    const tokenUri = await this.contracts.nounsTokenContract.tokenURI(id, overrides);
     if (!tokenUri) throw new Error('No tokenURI for that token ID');
     return parseBase64TokenUri(tokenUri);
   }
 
-  async getSvg(id: number): Promise<string> {
-    const tokenUri = await this.getTokenUri(id);
+  async getSvg(id: number, overrides: Overrides = {}): Promise<string> {
+    const tokenUri = await this.getTokenUri(id, overrides);
     return tokenUri.image;
   }
 
   async getRawSvg(id: number, options: SVGOptions = {}): Promise<Buffer> {
-    let svg = Buffer.from((await this.getSvg(id)).substr(26), 'base64');
+    let svg = Buffer.from((await this.getSvg(id, options.overrides)).substr(26), 'base64');
     if (options.removeBackground) {
       svg = Buffer.from(
         svg

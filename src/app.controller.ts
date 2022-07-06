@@ -13,10 +13,11 @@ import * as fs from 'fs';
 import { cachePath as computeCachePath } from './utils/cachePath';
 import { getRandomGlasses } from './utils/glasses';
 import * as R from 'ramda';
+import { generateHexFromNumber } from './utils/number';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
   @Get()
   @Render('index')
@@ -29,17 +30,35 @@ export class AppController {
     return this.appService.getTokenUri(id);
   }
 
+  @Get('/block/:blockTag/:id')
+  async getImageAtBlock(
+    @Param('id') id: string,
+    @Param('blockTag') blockTag: string,
+    @Res() res: Response,
+    @Query('size') size: string,
+    @Query('removeBackground') removeBackground: boolean,
+  ) {
+    const imageSize = this.flattenSize(size);
+    const idParts = id.split('.');
+    const nounId = parseInt(idParts[0]);
+    const format = idParts[1] || 'png';
+
+    const noun = await this.appService.generateNounSvgAtBlock(nounId, blockTag)
+    noun.toFormat(format).pipe(res);
+    return;
+  }
+
   @Get(':id.svg')
   async getSvg(
     @Param('id') id: number,
     @Res() res: Response,
     @Query('removeBackground') removeBackground: boolean,
   ) {
-    const cacheName = [id, removeBackground ? "rmb": ""].join('_');
+    const cacheName = [id, removeBackground ? "rmb" : ""].join('_');
     // return (await this.appService.getRawSvg(id)).toString();
     const cachePath = `/tmp/nouns/${cacheName}.svg`;
     if (!fs.existsSync(cachePath)) {
-      const svg = (await this.appService.getRawSvg(id, {removeBackground})).toString();
+      const svg = (await this.appService.getRawSvg(id, { removeBackground })).toString();
       fs.writeFileSync(cachePath, svg);
     }
     res.sendFile(cachePath);
@@ -53,28 +72,36 @@ export class AppController {
     @Query('includeDelegates') includeDelegates: string,
     @Query('size') size: string,
   ) {
-    const fullAddress = `0x${addr}`;
+    const addrParts = addr.split('.');
+    const address = addrParts[0];
+    const format = addrParts[1] || 'png';
+    const fullAddress = `0x${address}`;
+
     const nounTile = await this.appService.getAddressNounTile(
       fullAddress,
       includeDelegates === 'true',
     );
-    nounTile.toFormat('png').pipe(res);
+    nounTile.toFormat(format).pipe(res);
   }
 
-  @Get(':ens.eth')
+  @Get(':ens.eth:ext?')
   async getEnsNameNouns(
     @Param('ens') ens: string,
+    @Param('ext') ext: string,
     @Res() res: Response,
     @Query('includeDelegates') includeDelegates: string,
     @Query('size') size: string,
   ) {
+    const format = ext ? ext.replace('.', '') : 'png'
     const fullAddress = await this.appService.resolveEnsName(`${ens}.eth`);
+
     const nounTile = await this.appService.getAddressNounTile(
       fullAddress,
       includeDelegates === 'true',
     );
-    nounTile.toFormat('png').pipe(res);
+    nounTile.toFormat(format).pipe(res);
   }
+
 
   @Get(':id')
   async getImage(
@@ -88,10 +115,11 @@ export class AppController {
     const nounId = parseInt(idParts[0]);
     const format = idParts[1] || 'png';
 
-    const png = await this.appService.getPng(nounId, imageSize, {removeBackground});
+    const png = await this.appService.getPng(nounId, imageSize, { removeBackground });
     png.toFormat(format).pipe(res);
     return;
   }
+
 
   private flattenSize = (size: number | string) =>
     R.min(size ? Number(size) : 320, 1600);
