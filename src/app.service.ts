@@ -1,24 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JsonRpcProvider } from '@ethersproject/providers';
-import { getContractsForChainOrThrow, DecodedImage } from '@nouns/sdk';
+import { getContractsForChainOrThrow, DecodedImage, NounsTokenFactory } from '@nouns/sdk';
 import { parseBase64TokenUri } from './utils/tokenUri';
 import { TokenUri } from './types/tokenUri';
 import * as sharp from 'sharp';
-import defaults from './utils/constants';
-import { allNouns, nounsForAddress } from './utils/theGraph';
+import {  nounsForAddress } from './utils/theGraph';
 import { Noun } from './types/noun';
 import * as R from 'ramda';
 import constants from './utils/constants';
 import * as fs from 'fs';
 import { cachePath as computeCachePath } from './utils/cachePath';
 import ENS, { getEnsAddress } from '@ensdomains/ensjs';
-import { ImageData } from '@nouns/assets';
-import { buildSVG } from '@nouns/sdk';
 import { getRandomGlasses } from './utils/glasses';
 import { SVGOptions } from './types/svg';
-import { ethers, Overrides } from 'ethers';
+import {  Overrides } from 'ethers';
 import { generateHexFromNumber } from './utils/number';
+import { getContractsForChainOrThrow as getLilNounsContractsForChainOrThrow } from './utils/lilNouns';
 
 export const DEFAULT_IMAGE_SIZE = 320;
 
@@ -33,6 +31,11 @@ export class AppService {
     const chainId = this.configService.get<number>('CHAIN_ID') || 1;
     this.provider = new JsonRpcProvider(jsonRpcUrl);
     this.contracts = getContractsForChainOrThrow(chainId, this.provider);
+    switch (process.env.TOKEN) {
+      case "lilNouns":
+        this.contracts = getLilNounsContractsForChainOrThrow(chainId, this.provider)
+        break;
+    }
     this.ens = new ENS({
       provider: this.provider,
       ensAddress: getEnsAddress('1'),
