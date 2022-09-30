@@ -19,7 +19,7 @@ import * as R from 'ramda';
 
 @Controller()
 export class AppController {
-  private readonly logger= new Logger(AppController.name)
+  private readonly logger = new Logger(AppController.name);
   constructor(private readonly appService: AppService) {}
 
   @Get()
@@ -30,11 +30,11 @@ export class AppController {
 
   @Get('favicon.ico')
   @HttpCode(404)
-  getFavicon(){}
+  getFavicon() {}
 
   @Get('tokenUri/:id')
   async getTokenUri(@Param('id') id: number) {
-    this.logger.verbose(`Handling tokenUri/${id}`)
+    this.logger.verbose(`Handling tokenUri/${id}`);
     return this.appService.getTokenUri(id);
   }
 
@@ -44,12 +44,14 @@ export class AppController {
     @Res() res: Response,
     @Query('removeBackground') removeBackground: boolean,
   ) {
-    this.logger.verbose(`Handling ${id}.svg`)
-    const cacheName = [id, removeBackground ? "rmb": ""].join('_');
+    this.logger.verbose(`Handling ${id}.svg`);
+    const cacheName = [id, removeBackground ? 'rmb' : ''].join('_');
     // return (await this.appService.getRawSvg(id)).toString();
     const cachePath = `/tmp/nouns/${cacheName}.svg`;
     if (!fs.existsSync(cachePath)) {
-      const svg = (await this.appService.getRawSvg(id, {removeBackground})).toString();
+      const svg = (
+        await this.appService.getRawSvg(id, { removeBackground })
+      ).toString();
       fs.writeFileSync(cachePath, svg);
     }
     res.sendFile(cachePath);
@@ -63,7 +65,7 @@ export class AppController {
     @Query('includeDelegates') includeDelegates: string,
     @Query('size') size: string,
   ) {
-    this.logger.verbose(`Handling address 0x${addr}`)
+    this.logger.verbose(`Handling address 0x${addr}`);
     const fullAddress = `0x${addr}`;
     const nounTile = await this.appService.getAddressNounTile(
       fullAddress,
@@ -79,13 +81,29 @@ export class AppController {
     @Query('includeDelegates') includeDelegates: string,
     @Query('size') size: string,
   ) {
-    this.logger.verbose(`Handling ens ${ens}.eth`)
+    this.logger.verbose(`Handling ens ${ens}.eth`);
     const fullAddress = await this.appService.resolveEnsName(`${ens}.eth`);
     const nounTile = await this.appService.getAddressNounTile(
       fullAddress,
       includeDelegates === 'true',
     );
     nounTile.toFormat('png').pipe(res);
+  }
+
+  @Get('/range')
+  async getRange(@Query('start') start: number, @Query('end') end: number) {
+    // Latch and correct order
+    start = start ? Number(start) : 0;
+    end = end ? Number(end) : 0;
+    start = start - end < 0 ? start : end;
+    end = start - end < 0 ? end : start;
+
+    return await Promise.all(
+      new Array(Math.abs(end - start + 1)).fill(0).map(async (_, i) => ({
+        id: i + start,
+        svg: (await this.appService.getSvg(i)).toString(),
+      })),
+    );
   }
 
   @Get(':id')
@@ -95,13 +113,15 @@ export class AppController {
     @Query('size') size: string,
     @Query('removeBackground') removeBackground: boolean,
   ) {
-    this.logger.verbose(`Handling id ${id}`)
+    this.logger.verbose(`Handling id ${id}`);
     const imageSize = this.flattenSize(size);
     const idParts = id.split('.');
     const nounId = parseInt(idParts[0]);
     const format = idParts[1] || 'png';
 
-    const png = await this.appService.getPng(nounId, imageSize, {removeBackground});
+    const png = await this.appService.getPng(nounId, imageSize, {
+      removeBackground,
+    });
     png.toFormat(format).pipe(res);
     return;
   }

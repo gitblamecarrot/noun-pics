@@ -1,4 +1,4 @@
-import { CACHE_MANAGER, Inject, Injectable, Logger } from '@nestjs/common';
+import { CACHE_MANAGER, Inject, Injectable, Logger, Scope } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { getContractsForChainOrThrow, DecodedImage } from '@nouns/sdk';
@@ -21,12 +21,12 @@ import { Cache } from 'cache-manager';
 
 export const DEFAULT_IMAGE_SIZE = 320;
 
-@Injectable()
+@Injectable({scope: Scope.DEFAULT})
 export class AppService {
   private provider: JsonRpcProvider;
   private contracts;
   private ens;
-  private readonly logger = new Logger(AppService.name)
+  private readonly logger = new Logger(AppService.name);
 
   constructor(
     @Inject(CACHE_MANAGER)
@@ -50,11 +50,15 @@ export class AppService {
       this.buildTokenUriCacheKey(id),
     );
     if (!tokenUri) {
-      this.logger.verbose(`Cache miss for ${id}`)
+      this.logger.verbose(`Cache miss for ${id}`);
       tokenUri = await this.contracts.nounsTokenContract.tokenURI(id);
       tokenUri = parseBase64TokenUri(tokenUri);
-      await this.cacheManager.set(this.buildTokenUriCacheKey(id), tokenUri);
-    } 
+      if (tokenUri) {
+        // Fetching non-existent will throw but just be safe
+        this.logger.verbose(`Writing cache for ${id}`);
+        await this.cacheManager.set(this.buildTokenUriCacheKey(id), tokenUri);
+      }
+    }
     if (!tokenUri) throw new Error('No tokenURI for that token ID');
     return tokenUri;
   }

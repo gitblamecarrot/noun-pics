@@ -7,7 +7,10 @@ import * as redisStore from 'cache-manager-redis-store';
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    CacheModule.register(),
+    CacheModule.register({
+      ttl: 7 * 24 * 60 * 60,
+      max: 5000,
+    }),
     // CacheModule.register<RedisClientOptions>({
     //   store: redisStore,
     //   host: process.env.REDIS_HOST || "localhost",
