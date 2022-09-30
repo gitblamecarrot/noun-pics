@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { getContractsForChainOrThrow, DecodedImage } from '@nouns/sdk';
@@ -17,6 +17,7 @@ import { ImageData } from '@nouns/assets';
 import { buildSVG } from '@nouns/sdk';
 import { getRandomGlasses } from './utils/glasses';
 import { SVGOptions } from './types/svg';
+import { Cache } from 'cache-manager';
 
 export const DEFAULT_IMAGE_SIZE = 320;
 
@@ -25,8 +26,13 @@ export class AppService {
   private provider: JsonRpcProvider;
   private contracts;
   private ens;
+  private readonly logger = new Logger(AppService.name)
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
+    private readonly configService: ConfigService,
+  ) {
     const jsonRpcUrl = this.configService.get<string>('JSON_RPC_URL');
     const chainId = this.configService.get<number>('CHAIN_ID') || 1;
     this.provider = new JsonRpcProvider(jsonRpcUrl);
@@ -37,10 +43,20 @@ export class AppService {
     });
   }
 
+  buildTokenUriCacheKey = (id: number) => `tokenUri_${id}`;
+
   async getTokenUri(id: number): Promise<TokenUri> {
-    const tokenUri = await this.contracts.nounsTokenContract.tokenURI(id);
+    let tokenUri = await this.cacheManager.get<TokenUri | null>(
+      this.buildTokenUriCacheKey(id),
+    );
+    if (!tokenUri) {
+      this.logger.verbose(`Cache miss for ${id}`)
+      tokenUri = await this.contracts.nounsTokenContract.tokenURI(id);
+      tokenUri = parseBase64TokenUri(tokenUri);
+      await this.cacheManager.set(this.buildTokenUriCacheKey(id), tokenUri);
+    } 
     if (!tokenUri) throw new Error('No tokenURI for that token ID');
-    return parseBase64TokenUri(tokenUri);
+    return tokenUri;
   }
 
   async getSvg(id: number): Promise<string> {

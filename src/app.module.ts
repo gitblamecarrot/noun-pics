@@ -7,6 +7,7 @@ import * as redisStore from 'cache-manager-redis-store';
 @Module({
   imports: [
     ConfigModule.forRoot(),
+    CacheModule.register(),
     // CacheModule.register<RedisClientOptions>({
     //   store: redisStore,
     //   host: process.env.REDIS_HOST || "localhost",

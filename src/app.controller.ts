@@ -2,6 +2,9 @@ import {
   Controller,
   Get,
   Header,
+  HttpCode,
+  HttpStatus,
+  Logger,
   Param,
   Query,
   Render,
@@ -16,6 +19,7 @@ import * as R from 'ramda';
 
 @Controller()
 export class AppController {
+  private readonly logger= new Logger(AppController.name)
   constructor(private readonly appService: AppService) {}
 
   @Get()
@@ -24,8 +28,13 @@ export class AppController {
     return '';
   }
 
+  @Get('favicon.ico')
+  @HttpCode(404)
+  getFavicon(){}
+
   @Get('tokenUri/:id')
   async getTokenUri(@Param('id') id: number) {
+    this.logger.verbose(`Handling tokenUri/${id}`)
     return this.appService.getTokenUri(id);
   }
 
@@ -35,6 +44,7 @@ export class AppController {
     @Res() res: Response,
     @Query('removeBackground') removeBackground: boolean,
   ) {
+    this.logger.verbose(`Handling ${id}.svg`)
     const cacheName = [id, removeBackground ? "rmb": ""].join('_');
     // return (await this.appService.getRawSvg(id)).toString();
     const cachePath = `/tmp/nouns/${cacheName}.svg`;
@@ -53,6 +63,7 @@ export class AppController {
     @Query('includeDelegates') includeDelegates: string,
     @Query('size') size: string,
   ) {
+    this.logger.verbose(`Handling address 0x${addr}`)
     const fullAddress = `0x${addr}`;
     const nounTile = await this.appService.getAddressNounTile(
       fullAddress,
@@ -68,6 +79,7 @@ export class AppController {
     @Query('includeDelegates') includeDelegates: string,
     @Query('size') size: string,
   ) {
+    this.logger.verbose(`Handling ens ${ens}.eth`)
     const fullAddress = await this.appService.resolveEnsName(`${ens}.eth`);
     const nounTile = await this.appService.getAddressNounTile(
       fullAddress,
@@ -83,6 +95,7 @@ export class AppController {
     @Query('size') size: string,
     @Query('removeBackground') removeBackground: boolean,
   ) {
+    this.logger.verbose(`Handling id ${id}`)
     const imageSize = this.flattenSize(size);
     const idParts = id.split('.');
     const nounId = parseInt(idParts[0]);
