@@ -99,10 +99,13 @@ export class AppController {
     end = start - end < 0 ? end : start;
 
     return await Promise.all(
-      new Array(Math.abs(end - start + 1)).fill(0).map(async (_, i) => ({
-        id: i + start,
-        svg: (await this.appService.getSvg(i)).toString(),
-      })),
+      new Array(Math.abs(end - start + 1)).fill(0).map(async (_, i) => {
+        const id = i + start;
+        return {
+          id,
+          svg: (await this.appService.getSvg(id)).toString(),
+        };
+      }),
     );
   }
 
